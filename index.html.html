@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сайлау процесі: Интерактивті оқу-әдістемелік кешені</title>
+    <style>
+        /* Ортақ стильдер мен айнымалылар */
+        :root {
+            --primary-color: #1ba0aa;
+            --primary-blue: #0052a5;
+            --secondary-gold: #e6b800;
+            --dark-navy: #002f6c;
+            --background-color: #f4f7f6;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --gray-light: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark-navy) 0%, var(--primary-blue) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Басты таб мәзірі */
+        .navigation-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 1000px;
+            width: 100%;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab-btn.active {
+            background: var(--secondary-gold);
+            color: #000;
+            border-color: var(--secondary-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Ойын контейнерлерінің ортақ құрылымы */
+        .game-wrapper-content {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+            padding: 30px;
+            border-top: 6px solid var(--secondary-gold);
+            position: relative;
+        }
+
+        .game-wrapper-content.active {
+            display: block;
+        }
+
+        h2, h1.header-title, .main-title, .game-header h1 {
+            text-align: center;
+            color: var(--primary-blue);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        p.instruction, .instruction {
+            background: #fffdf5;
+            border-left: 4px solid var(--secondary-gold);
+            padding: 12px;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            color: #4a5568;
+            line-height: 1.5;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Батырмалардың ортақ стильдері */
+        button.btn-shared {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* ------------------------------------------------------
+           1-ОЙЫН СТИЛЬДЕРІ (Дауыс беру тәртібі)
+        --------------------------------------------------------- */
+        #draggable-list { list-style: none; padding: 0; }
+        .list-item {
+            background-color: #1ba0aa; color: white; margin-bottom: 12px;
+            padding: 15px 20px; border-radius: 30px; cursor: grab;
+            display: flex; align-items: center; font-size: 16px;
+            font-weight: 500; transition: all 0.2s; user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .list-item:active { cursor: grabbing; }
+        .list-item.dragging { opacity: 0.5; transform: scale(0.98); }
+        .index-badge {
+            background: rgba(255, 255, 255, 0.2); border: 2px solid white;
+            border-radius: 50%; width: 28px; height: 28px; display: flex;
+            align-items: center; justify-content: center; margin-right: 15px;
+            font-weight: bold; font-size: 14px; flex-shrink: 0;
+        }
+        .buttons-container { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
+        .btn-check { background-color: #27ae60; color: white; }
+        .btn-check:hover { background-color: #219653; }
+        .btn-reset { background-color: #7f8c8d; color: white; }
+        .btn-reset:hover { background-color: #95a5a6; }
+        #result-message { margin-top: 20px; text-align: center; font-size: 18px; font-weight: bold; min-height: 27px; }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+
+        /* ------------------------------------------------------
+           2-ОЙЫН СТИЛЬДЕРІ (Сайлау регламенті)
+        --------------------------------------------------------- */
+        .progress-bar { height: 6px; background-color: #e0e0e0; width: 100%; border-radius: 3px; margin-bottom: 25px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--secondary-gold); width: 20%; transition: width 0.5s ease; }
+        .step-indicator { background: var(--primary-blue); color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.9rem; float: right; }
+        .question-box { font-size: 1.2rem; font-weight: 600; margin-bottom: 25px; line-height: 1.5; color: #111; clear: both; padding-top: 10px; }
+        .drop-zone {
+            border: 3px dashed var(--primary-blue); background-color: #f0f7ff; min-height: 75px;
+            border-radius: 12px; display: flex; justify-content: center; align-items: center;
+            margin-bottom: 30px; padding: 12px; transition: all 0.3s ease; font-style: italic;
+            color: #666; text-align: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); font-weight: 500;
+        }
+        .drop-zone.hovered { background-color: #e1f0ff; border-color: var(--secondary-gold); transform: scale(1.01); }
+        .drop-zone.correct { border-color: var(--success-color); background-color: #d4edda; color: #155724; font-style: normal; }
+        .drop-zone.incorrect { border-color: var(--error-color); background-color: #f8d7da; color: #721c24; font-style: normal; }
+        .options-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
+        .option {
+            background: #ffffff; border: 2px solid #ccc; padding: 14px 20px; border-radius: 10px;
+            cursor: grab; user-select: none; font-weight: 500; transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-size: 1rem; line-height: 1.4;
+        }
+        .option:hover { border-color: var(--primary-blue); background-color: #f9f9f9; transform: translateY(-2px); }
+        .feedback { text-align: center; font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; height: 25px; }
+        .next-btn { background-color: var(--secondary-gold); color: #000; border: none; padding: 12px 35px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; display: none; margin: 0 auto; }
+        .result-screen, .end-screen, .final-screen, .end-box { text-align: center; display: none; padding: 20px 0; }
+        .result-screen h2, .end-screen h2, .final-screen h2, .end-box h2 { color: var(--success-color); font-size: 1.8rem; margin-bottom: 15px; }
+        .result-screen p, .end-screen p, .final-screen p, .end-box p { font-size: 1.1rem; margin-bottom: 25px; line-height: 1.6; }
+        .restart-btn, .modal-btn, .action-btn { background-color: var(--primary-blue); color: white; border: none; padding: 12px 30px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .restart-btn:hover, .modal-btn:hover, .action-btn:hover { opacity: 0.9; }
+
+        /* ------------------------------------------------------
+           3, 4, 5, 6, 7-ОЙЫНДАРҒА ОРТАҚ СТИЛЬДЕР (Кейіпкер/Жағдаят карточкалары)
+        --------------------------------------------------------- */
+        .score-board, .info-bar, .stats, .scoreboard, .status-panel {
+            display: flex; justify-content: space-between; margin-bottom: 20px;
+            font-weight: bold; font-size: 0.95rem; background: #f4f7fa;
+            padding: 12px 15px; border-radius: 8px; border: 1px solid #e2e8f0;
+        }
+        .visitor-card, .journalist-card {
+            background: #fdfdfd; border: 2px solid #e2e8f0; border-radius: 12px;
+            padding: 25px; text-align: center; margin-bottom: 25px; min-height: 200px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .visitor-icon, .badge-icon { font-size: 3.5rem; margin-bottom: 15px; }
+        .visitor-desc, .case-text, .situation-text, .quest-text { font-size: 1.1rem; font-weight: 500; line-height: 1.6; color: #1a202c; }
+        .actions, .control-panel, .decision-panel, .btn-group, .action-buttons { display: flex; gap: 15px; width: 100%; }
+        .btn {
+            flex: 1; border: none; padding: 15px; font-size: 1rem; font-weight: bold;
+            border-radius: 10px; cursor: pointer; color: white; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-allow, .btn-valid, .btn-yes { background-color: var(--success-color); box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25); }
+        .btn-deny, .btn-invalid, .btn-warn, .btn-no, .btn-reject { background-color: var(--error-color); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25); }
+        
+        /* Кері байланыс терезелері (Оверлей/Модаль) */
+        .feedback-overlay, .modal, .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 16px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+            font-size: 1.4rem; font-weight: bold; padding: 30px; text-align: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 10;
+        }
+        .feedback-overlay.show, .modal.show, .overlay.show { opacity: 1; pointer-events: auto; }
+        .feedback-overlay p, .modal p, .overlay p { font-size: 1rem; font-weight: normal; margin-top: 15px; line-height: 1.5; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; color: white; }
+        .next-visitor-btn, .modal-next-btn { margin-top: 20px; background: white; color: #333; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* 4-ОЙЫН ЕРЕКШЕЛІКТЕРІ (Құжаттар) */
+        .desk-area { background: var(--gray-light); border: 2px dashed #cbd5e0; border-radius: 10px; padding: 20px; margin-bottom: 20px; width: 100%; }
+        .desk-title { font-size: 0.85rem; color: #718096; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; }
+        .document-item { background: white; border-left: 5px solid var(--primary-blue); padding: 12px 15px; border-radius: 4px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.95rem; line-height: 1.4; color: #333; text-align: left; }
+        .checklist-area { background: #f0f7ff; border: 1px solid #bee3f8; border-radius: 10px; padding: 15px; margin-bottom: 25px; width: 100%; }
+        .checklist-title { font-weight: bold; color: var(--dark-navy); margin-bottom: 12px; font-size: 1rem; text-align: left; }
+        .check-label { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; cursor: pointer; font-size: 0.95rem; user-select: none; text-align: left; color: #333; }
+        .check-label input { margin-top: 4px; transform: scale(1.2); }
+
+        /* 6-ОЙЫН ЕРЕКШЕЛІКТЕРІ */
+        .situation-box { background: #fffdf5; border-left: 5px solid var(--secondary-gold); padding: 20px; border-radius: 4px; margin-bottom: 25px; text-align: left; width: 100%; }
+        .situation-title { font-size: 0.85rem; color: #718096; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
+
+        /* ------------------------------------------------------
+           8-ОЙЫН СТИЛЬДЕРІ (Сайлау залын жинақтау)
+        --------------------------------------------------------- */
+        .voting-room { width: 100%; height: 440px; background: #e2e8f0; border: 3px solid var(--dark-navy); border-radius: 12px; position: relative; overflow: hidden; box-shadow: inset 0 0 40px rgba(0,0,0,0.15); margin-bottom: 25px; }
+        .room-carpet { position: absolute; bottom: 0; left: 25%; width: 50%; height: 80%; background: #cbd5e0; clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%); opacity: 0.6; }
+        .room-sign { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 1.4rem; font-weight: bold; color: var(--dark-navy); letter-spacing: 2px; }
+        .arrow-indicator { position: absolute; bottom: 12px; font-weight: bold; font-size: 0.9rem; color: var(--primary-blue); }
+        .arrow-in { left: 40px; } .arrow-out { right: 40px; }
+        .room-spot { position: absolute; border: 2px dashed #a0aec0; background: rgba(255, 255, 255, 0.5); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: #a0aec0; text-align: center; padding: 5px; transition: all 0.3s; }
+        .room-spot.correct { border-color: var(--success-color); background: rgba(40, 167, 69, 0.15); }
+        #spot-board { top: 80px; left: 30px; width: 140px; height: 110px; }
+        #spot-tables { bottom: 90px; left: 30px; width: 160px; height: 120px; }
+        #spot-cabins { top: 65px; left: 30%; width: 40%; height: 100px; }
+        #spot-box { top: 195px; left: 42%; width: 16%; height: 95px; }
+        #spot-symbols { top: 65px; right: 40px; width: 150px; height: 95px; }
+        #spot-observers { bottom: 40px; right: 30px; width: 180px; height: 130px; }
+        .inventory-zone { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 15px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px; min-height: 110px; width: 100%; }
+        .drag-card { background: white; border: 2px solid #cbd5e0; border-radius: 8px; padding: 10px; width: 145px; text-align: center; cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.05); user-select: none; transition: transform 0.2s; }
+        .card-icon { font-size: 2.1rem; margin-bottom: 5px; display: block; }
+        .card-title { font-size: 0.8rem; font-weight: bold; color: #2d3748; line-height: 1.3; }
+        .room-spot .drag-card { width: 100%; height: 100%; border: none; background: transparent; box-shadow: none; padding: 2px; }
+        .room-spot .drag-card .card-icon { font-size: 1.6rem; margin-bottom: 2px; }
+        .room-spot .drag-card .card-title { font-size: 0.7rem; }
+        .btn-submit { width: 100%; background: var(--secondary-gold); color: black; border: none; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .game-8-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; border-radius: 16px; padding: 20px; }
+        .game-8-modal-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+    <!-- Навигациялық Табтар -->
+    <div class="navigation-tabs">
+        <button class="tab-btn active" onclick="switchTab(1)">1. Дауыс беру реті</button>
+        <button class="tab-btn" onclick="switchTab(2)">2. Таңғы регламент</button>
+        <button class="tab-btn" onclick="switchTab(3)">3. Бақылаушылар сүзгісі</button>
+        <button class="tab-btn" onclick="switchTab(4)">4. Құжат тексеру</button>
+        <button class="tab-btn" onclick="switchTab(5)">5. Шетелдік БАҚ</button>
+        <button class="tab-btn" onclick="switchTab(6)">6. Тәртіп мониторингі</button>
+        <button class="tab-btn" onclick="switchTab(7)">7. Үйден дауыс беру</button>
+        <button class="tab-btn" onclick="switchTab(8)">8. Залды жинақтау</button>
+    </div>
+
+    <!-- ======================================================
+       1-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-1" class="game-wrapper-content active">
+        <h2>Дауыс беруді ұйымдастыру тәртібі</h2>
+        <p class="instruction">Төмендегі кезеңдерді тінтуірмен (немесе саусақпен) жылжытып, дұрыс реттілікке қойыңыз:</p>
+        <ul id="draggable-list"></ul>
+        <div class="buttons-container">
+            <button class="btn-shared btn-check" onclick="checkOrderG1()">Тексеру</button>
+            <button class="btn-shared btn-reset" onclick="initGameG1()">Араластыру</button>
+        </div>
+        <div id="result-message"></div>
+    </div>
+
+    <!-- ======================================================
+       2-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-2" class="game-wrapper-content">
+        <div id="quiz-box-g2">
+            <div class="progress-bar"><div class="progress-fill" id="progress-g2"></div></div>
+            <span class="step-indicator" id="step-text-g2">Сұрақ 1/5</span>
+            <h1 class="header-title">Сайлау регламенті</h1>
+            <div class="question-box" id="question-g2"></div>
+            <div class="drop-zone" id="drop-zone-g2">Жауапты осы жерге апарып тастаңыз</div>
+            <div class="options-container" id="options-container-g2"></div>
+            <div class="feedback" id="feedback-g2"></div>
+            <button class="next-btn" id="next-btn-g2" onclick="nextQuestionG2()">Келесі сұрақ ➡️</button>
+        </div>
+        <div class="result-screen" id="result-screen-g2">
+            <h2>Керемет нәтиже! 🎉</h2>
+            <p>Сіз өте күрделі әрі ұқсас нұсқалардың ішінен қателеспей, сайлау учаскесінің таңғы регламентін толық дәлелдедіңіз!</p>
+            <button class="restart-btn" onclick="restartGameG2()">Қайта бастау</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       3-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-3" class="game-wrapper-content">
+        <div id="game-stage-g3">
+            <h1>Сайлау учаскесі: Бақылаушылар сүзгісі</h1>
+            <div class="score-board">
+                <span id="question-num-g3">Кейіпкер: 1/5</span>
+                <span id="score-g3">Ұпай: 0</span>
+            </div>
+            <div class="visitor-card">
+                <div class="visitor-icon" id="visitor-icon-g3">👥</div>
+                <div class="visitor-desc" id="visitor-desc-g3">Жүктелуде...</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-deny" onclick="checkChoiceG3(false)">⛔ Кіргізбеу / Шектеу</button>
+                <button class="btn btn-allow" onclick="checkChoiceG3(true)">✅ Рұқсат беру</button>
+            </div>
+        </div>
+        <div class="feedback-overlay" id="feedback-overlay-g3">
+            <div id="feedback-status-g3" style="font-size: 2.5rem;"></div>
+            <div id="feedback-title-g3" style="font-size: 1.5rem; font-weight: bold; margin-top: 10px;"></div>
+            <p id="feedback-law-g3"></p>
+            <button class="next-visitor-btn" onclick="nextVisitorG3()">Келесі қонақ ➡️</button>
+        </div>
+        <div class="result-screen" id="result-screen-g3">
+            <h2>Сүзгі аяқталды! 🗳️</h2>
+            <p id="final-text-g3"></p>
+            <button class="restart-btn" onclick="restartGameG3()">Қайтадан тексеру</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       4-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-4" class="game-wrapper-content">
+        <div id="game-zone-g4">
+            <h1>Республикалық байқаушылардың құжаттарын тексеру</h1>
+            <div class="info-bar">
+                <span id="case-num-g4">Байқаушы: 1/3</span>
+                <span id="score-text-g4">Дұрыс шешім: 0</span>
+            </div>
+            <div class="desk-area">
+                <div class="desk-title">📂 Үстелдегі құжаттар мен жағдай:</div>
+                <div id="documents-container-g4"></div>
+            </div>
+            <div class="checklist-area">
+                <div class="checklist-title">🔍 Заң бойынша міндетті талаптарды белгілеңіз:</div>
+                <label class="check-label">
+                    <input type="checkbox" id="check-id-g4">
+                    <span>Байқаушының <b>Жеке басын куәландыратын құжаты</b> (жеке куәлік/паспорт) бар.</span>
+                </label>
+                <label class="check-label">
+                    <input type="checkbox" id="check-doc-g4">
+                    <span>Ұйым атынан <b>жазбаша құжаты</b> (жолдамасы) бар және онда байқаушының <b>Т.А.Ә. толық көрсетілген</b>.</span>
+                </label>
+                <label class="check-label">
+                    <input type="checkbox" id="check-stamp-g4">
+                    <span>Жазбаша құжат оны жіберген қоғамдық ұйымның <b>ресми мөрімен</b> куәландырылған.</span>
+                </label>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-reject" onclick="processDecisionG4(false)">⛔ Кіргізуден бас тарту</button>
+                <button class="btn btn-accept" onclick="processDecisionG4(true)">✅ Сайлау залына кіргізу</button>
+            </div>
+        </div>
+        <div class="modal" id="feedback-modal-g4">
+            <h2 id="modal-status-g4">Нәтиже</h2>
+            <p id="modal-desc-g4">Түсіндірме мәтін</p>
+            <button class="modal-next-btn" onclick="goToNextCaseG4()">Келесі байқаушы ➡️</button>
+        </div>
+        <div class="final-screen" id="final-screen-g4">
+            <h2>Тексеру аяқталды! 📑</h2>
+            <p id="final-desc-g4"></p>
+            <button class="modal-btn" style="background: var(--secondary-gold); color: black;" onclick="restartAppG4()">Қайта іске қосу</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       5-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-5" class="game-wrapper-content">
+        <div id="game-stage-g5">
+            <h1 class="main-title">Шетелдік БАҚ: Құжаттарды тексеру</h1>
+            <div class="stats">
+                <span id="case-counter-g5">Журналист: 1/4</span>
+                <span id="score-counter-g5">Дұрыс таңдау: 0</span>
+            </div>
+            <div class="journalist-card" id="j-card-g5">
+                <div class="badge-icon" id="j-icon-g5">🌐</div>
+                <div class="case-text" id="j-text-g5">Жүктелуде...</div>
+            </div>
+            <div class="control-panel">
+                <button class="btn btn-deny" onclick="evaluateChoiceG5(false)">⛔ Кіргізбеу</button>
+                <button class="btn btn-allow" onclick="evaluateChoiceG5(true)">✅ Рұқсат беру</button>
+            </div>
+        </div>
+        <div class="modal" id="info-overlay-g5">
+            <h2 id="status-title-g5">Нәтиже</h2>
+            <p id="law-text-g5">Түсініктеме</p>
+            <button class="modal-next-btn" onclick="nextCaseG5()">Келесі журналист ➡️</button>
+        </div>
+        <div class="end-screen" id="end-screen-g5">
+            <h2>Тексеру аяқталды! 📑</h2>
+            <p id="final-report-g5"></p>
+            <button class="action-btn" style="background: var(--secondary-gold); color: black;" onclick="restartGameG5()">Қайта іске қосу</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       6-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-6" class="game-wrapper-content">
+        <div id="main-game-g6">
+            <h1>Байқаушылар міндеті: Жағдаяттық симулятор</h1>
+            <div class="scoreboard">
+                <span id="case-num-g6">Жағдай: 1/4</span>
+                <span id="score-num-g6">Дұрыс бағалау: 0</span>
+            </div>
+            <div class="situation-box">
+                <div class="situation-title">🚨 Учаскедегі іс-әрекет:</div>
+                <div class="situation-text" id="situation-text-g6">Жүктелуде...</div>
+            </div>
+            <div class="decision-panel">
+                <button class="btn btn-allow" onclick="checkAnswerG6(false)">✅ Тәртіп бұзылған жоқ</button>
+                <button class="btn btn-deny" onclick="checkAnswerG6(true)">⛔ Тәртіп бұзылды (Шара қолдану)</button>
+            </div>
+        </div>
+        <div class="modal" id="feedback-box-g6">
+            <h2 id="feedback-title-g6">Тақырып</h2>
+            <p id="law-explanation-g6">Заңнамалық негіздеме</p>
+            <button class="modal-next-btn" onclick="loadNextCaseG6()">Келесі жағдаят ➡️</button>
+        </div>
+        <div class="end-screen" id="result-screen-g6">
+            <h2>Мониторинг аяқталды! 🎯</h2>
+            <p id="final-stats-g6"></p>
+            <button class="action-btn" style="background: var(--secondary-gold); color: black;" onclick="restartSimulationG6()">Қайтадан бастау</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       7-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-7" class="game-wrapper-content">
+        <div id="game-playground-g7">
+            <h1>Үй жайдан тыс дауыс беруді ұйымдастыру</h1>
+            <div class="status-panel">
+                <span id="step-txt-g7">Кезең: 1/4</span>
+                <span id="score-txt-g7">Дұрыс шешім: 0</span>
+            </div>
+            <div class="situation-box">
+                <div class="quest-text" id="quest-text-g7">Жүктелуде...</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-deny" onclick="submitDecisionG7(false)">❌ Қате / Рұқсат етілмейді</button>
+                <button class="btn btn-allow" onclick="submitDecisionG7(true)">✅ Дұрыс / Рұқсат етіледі</button>
+            </div>
+        </div>
+        <div class="modal" id="overlay-box-g7">
+            <h2 id="overlay-title-g7">Нәтиже</h2>
+            <p id="overlay-desc-g7">Заңнамалық түсініктеме</p>
+            <button class="modal-next-btn" onclick="nextStepG7()">Келесі кезең ➡️</button>
+        </div>
+        <div class="end-box" id="end-box-g7">
+            <h2>Процесс аяқталды! 🗳️</h2>
+            <p id="end-desc-g7"></p>
+            <button class="action-btn" style="background: var(--secondary-gold); color: black;" onclick="restartSimulationG7()">Қайта іске қосу</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       8-ОЙЫН КОНТЕНТІ
+    =========================================================== -->
+    <div id="game-tab-8" class="game-wrapper-content">
+        <h1>Сайлау залын жинақтау симуляторы</h1>
+        <div class="instruction">
+            <b>Емтихан шарты:</b> Ұяшықтардағы подсказкалар толық өшірілді. Суреттегі визуалды жадыңыз бен сайлау заңына сүйеніп, төмендегі 6 маңызды нысанды залдың тиісті аймақтарына дұрыс орналастырыңыз.
+        </div>
+        <div class="voting-room">
+            <div class="room-carpet"></div>
+            <div class="room-sign">САЙЛАУ — ВЫБОРЫ</div>
+            <div class="arrow-indicator arrow-in">➡️ Кіру бағыты</div>
+            <div class="arrow-indicator arrow-out">⬅️ Шығу бағыты</div>
+            <div class="room-spot" id="spot-board" data-id="card-board">1-ші Аймақ</div>
+            <div class="room-spot" id="spot-tables" data-id="card-tables">2-ші Аймақ</div>
+            <div class="room-spot" id="spot-cabins" data-id="card-cabins">3-ші Аймақ</div>
+            <div class="room-spot" id="spot-box" data-id="card-box">4-ші Аймақ</div>
+            <div class="room-spot" id="spot-symbols" data-id="card-symbols">5-ші Аймақ</div>
+            <div class="room-spot" id="spot-observers" data-id="card-observers">6-ші Аймақ</div>
+        </div>
+        <div class="inventory-zone" id="inventory-zone-g8">
+            <div class="drag-card" draggable="true" id="card-cabins"><span class="card-icon">🟦</span><span class="card-title">Дауыс беру кабиналары</span></div>
+            <div class="drag-card" draggable="true" id="card-box"><span class="card-icon">🏛️</span><span class="card-title">Стационарлық жәшік</span></div>
+            <div class="drag-card" draggable="true" id="card-symbols"><span class="card-icon">🇰🇿</span><span class="card-title">Мемлекеттік Ту мен Елтаңба</span></div>
+            <div class="drag-card" draggable="true" id="card-board"><span class="card-icon">📋</span><span class="card-title">Ақпараттық стендтер</span></div>
+            <div class="drag-card" draggable="true" id="card-observers"><span class="card-icon">🪑</span><span class="card-title">Байқаушылар орындары</span></div>
+            <div class="drag-card" draggable="true" id="card-tables"><span class="card-icon">💻</span><span class="card-title">Тіркеу үстелдері</span></div>
+        </div>
+        <button class="btn-submit" onclick="verifyRoomG8()">🔒 Зал құрылымын бекіту</button>
+        <div class="game-8-modal" id="result-modal-g8">
+            <div class="game-8-modal-content">
+                <h2 id="modal-title-g8">Нәтиже</h2>
+                <p id="modal-desc-g8" style="color:#333; background:none; margin-top:5px;"></p>
+                <button class="modal-btn" onclick="resetSimulationG8()">Қайта іске қосу</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================
+       СҚРИПТТЕР БӨЛІМІ (ЛОГИКА)
+    =========================================================== -->
+    <script>
+        // Табтарды ауыстыру функциясы
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.game-wrapper-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`game-tab-${tabIndex}`).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // ------------------------------------------------------
+        // 1-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const correctOrderG1 = [
+            "Сайлаушы өзінің жеке басын куәландыратын құжатты ұсынады",
+            "УСК мүшесі тізімнен сайлаушыны табады",
+            "Сайлаушы бюллетеньді алғаны үшін тізімге қол қояды",
+            "УСК мүшесі сайлау бюллетеніне қол қояды",
+            "УСК мүшесі сайлаушыға бюллетень тапсырады",
+            "УСК мүшесі тізімге сайлаушының тегінің тұсына қол қояды"
+        ];
+        let currentItemsG1 = [];
+
+        function initGameG1() {
+            const listContainer = document.getElementById('draggable-list');
+            const resultDiv = document.getElementById('result-message');
+            listContainer.innerHTML = ''; resultDiv.innerHTML = ''; resultDiv.className = '';
+            currentItemsG1 = [...correctOrderG1].sort(() => Math.random() - 0.5);
+            if (JSON.stringify(currentItemsG1) === JSON.stringify(correctOrderG1)) return initGameG1();
+
+            currentItemsG1.forEach((text, index) => {
+                const li = document.createElement('li');
+                li.className = 'list-item'; li.draggable = true; li.dataset.text = text;
+                const badge = document.createElement('div'); badge.className = 'index-badge'; badge.innerText = index + 1;
+                const textSpan = document.createElement('span'); textSpan.innerText = text;
+                li.appendChild(badge); li.appendChild(textSpan); listContainer.appendChild(li);
+
+                li.addEventListener('dragstart', () => li.classList.add('dragging'));
+                li.addEventListener('dragend', () => { li.classList.remove('dragging'); updateBadgesG1(); });
+            });
+
+            listContainer.addEventListener('dragover', e => {
+                e.preventDefault();
+                const afterElement = getDragAfterElementG1(listContainer, e.clientY);
+                const draggingElement = document.querySelector('.dragging');
+                if (afterElement == null) listContainer.appendChild(draggingElement);
+                else listContainer.insertBefore(draggingElement, afterElement);
+            });
+            addTouchSupportG1();
+        }
+
+        function updateBadgesG1() {
+            document.querySelectorAll('#draggable-list .index-badge').forEach((badge, index) => badge.innerText = index + 1);
+        }
+
+        function getDragAfterElementG1(container, y) {
+            const draggableElements = [...container.querySelectorAll('.list-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+                else return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function addTouchSupportG1() {
+            const listContainer = document.getElementById('draggable-list');
+            let draggingElement = null;
+            listContainer.addEventListener('touchstart', e => {
+                if (e.target.closest('.list-item')) {
+                    draggingElement = e.target.closest('.list-item');
+                    draggingElement.classList.add('dragging');
+                }
+            }, { passive: true });
+            listContainer.addEventListener('touchmove', e => {
+                if (!draggingElement) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                const afterElement = getDragAfterElementG1(listContainer, touch.clientY);
+                if (afterElement == null) listContainer.appendChild(draggingElement);
+                else listContainer.insertBefore(draggingElement, afterElement);
+                updateBadgesG1();
+            }, { passive: false });
+            listContainer.addEventListener('touchend', () => { if (draggingElement) { draggingElement.classList.remove('dragging'); draggingElement = null; } });
+        }
+
+        function checkOrderG1() {
+            const userOrder = [...document.querySelectorAll('#draggable-list .list-item')].map(el => el.dataset.text);
+            const resultDiv = document.getElementById('result-message');
+            let isCorrect = userOrder.every((val, i) => val === correctOrderG1[i]);
+            if (isCorrect) { resultDiv.innerText = "🎉 Бәрі дұрыс! Сіз дауыс беру тәртібін өте жақсы білесіз."; resultDiv.className = "success"; }
+            else { resultDiv.innerText = "❌ Реттілікте қате бар. Қайтадан байқап көріңіз."; resultDiv.className = "error"; }
+        }
+        initGameG1();
+
+        // ------------------------------------------------------
+        // 2-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const quizDataG2 = [
+            { question: "1. Сағат 06:00-де сайлау учаскесінде қандай іс-әрекет бекітілген?", correct: "сайлау учаскесінің ашылатын уақыты", distractors: ["учаскелік комиссия мүшелерінің арасында бюллетендерді бөлу уақыты", "дауыс беруге арналған жәшіктерді тексеру және пломбалау уақыты"] },
+            { question: "2. Сағат 06:30-да дауыс беру жәшіктерінің ішін тексеріп, оларды пломбалауға немесе мөр басуға кім тікелей жауапты?", correct: "учаскелік сайлау комиссиясының төрағасы", distractors: ["учаскелік сайлау комиссиясының хатшысы мен байқаушылар", "учаскелік сайлау комиссиясының барлық мүшелері бірлесіп"] },
+            { question: "3. Сағат 06:30-да жәшіктерді пломбалаумен қатар жүретін учаскелік комиссия төрағасының міндеті қандай?", correct: "комиссияның бюллетендерді беруге жауапты мүшелерін айқындайды", distractors: ["сайлау учаскесін ашу туралы ресми хаттаманы толтыруды аяқтайды", "тіркелген байқаушылардың тізімін нақтылап, орындарға бөледі"] },
+            { question: "4. Сағат 06:45-те сайлау учаскесінде міндетті түрде қандай құжаттық рәсім атқарылады?", correct: "Сайлау учаскесін ашу туралы учаскелік сайлау комиссиясының хаттамасына қол қою", distractors: ["Сайлаушылардың келуін тіркеу журналын ресми түрде ашу және бекіту", "Бюллетендерді беруге жауапты мүшелердің тізімдік хаттамасын дайындау"] },
+            { question: "5. Сағат 07:00-де болатын іс-әрекеттің заңдық сипаттамасы қандай?", correct: "Комиссия төрағасы дауыс берудің ашылғандығы туралы жариялайды және дауыс беруге шақырады", distractors: ["Комиссия хатшысы алғашқы сайлаушыны тіркеп, оған бюллетень ұсынады", "Комиссия мүшелері дауыс беру жәшіктерінің пломба нөмірлерін дауыстап оқиды"] }
+        ];
+        let currentQuestionIdxG2 = 0; let selectedElementG2 = null;
+
+        function loadQuestionG2() {
+            const dropZoneEl = document.getElementById('drop-zone-g2');
+            dropZoneEl.innerHTML = "Жауапты осы жерге апарып тастаңыз"; dropZoneEl.className = "drop-zone";
+            document.getElementById('feedback-g2').textContent = ""; document.getElementById('next-btn-g2').style.display = "none";
+            document.getElementById('options-container-g2').style.display = "flex";
+            document.getElementById('progress-g2').style.width = `${((currentQuestionIdxG2 + 1) / quizDataG2.length) * 100}%`;
+            document.getElementById('step-text-g2').textContent = `Сұрақ ${currentQuestionIdxG2 + 1}/${quizDataG2.length}`;
+            
+            const currentQuiz = quizDataG2[currentQuestionIdxG2];
+            document.getElementById('question-g2').textContent = currentQuiz.question;
+            const allOptions = [currentQuiz.correct, ...currentQuiz.distractors].sort(() => Math.random() - 0.5);
+            
+            const container = document.getElementById('options-container-g2'); container.innerHTML = "";
+            allOptions.forEach((optText, idx) => {
+                const optNode = document.createElement('div'); optNode.classList.add('option'); optNode.setAttribute('draggable', 'true');
+                optNode.textContent = optText; optNode.id = `g2-opt-${idx}`;
+                optNode.addEventListener('dragstart', (e) => { selectedElementG2 = optNode; e.dataTransfer.setData('text/plain', optText); });
+                container.appendChild(optNode);
+            });
+        }
+
+        const dzG2 = document.getElementById('drop-zone-g2');
+        dzG2.addEventListener('dragover', e => { e.preventDefault(); if(!dzG2.classList.contains('correct')) dzG2.classList.add('hovered'); });
+        dzG2.addEventListener('dragleave', () => dzG2.classList.remove('hovered'));
+        dzG2.addEventListener('drop', e => {
+            e.preventDefault(); dzG2.classList.remove('hovered'); if(dzG2.classList.contains('correct')) return;
+            const droppedText = e.dataTransfer.getData('text/plain'); const correctAnswer = quizDataG2[currentQuestionIdxG2].correct;
+            dzG2.textContent = droppedText;
+            if (droppedText === correctAnswer) {
+                dzG2.className = "drop-zone correct"; document.getElementById('feedback-g2').textContent = "Өте дұрыс! 🎯"; document.getElementById('feedback-g2').style.color = "var(--success-color)";
+                if(selectedElementG2) selectedElementG2.style.visibility = 'hidden';
+                document.getElementById('options-container-g2').style.display = "none"; document.getElementById('next-btn-g2').style.display = "block";
+            } else {
+                dzG2.className = "drop-zone incorrect"; document.getElementById('feedback-g2').textContent = "Қате! Нұсқаларды қайта мұқият оқып көріңіз. ❌"; document.getElementById('feedback-g2').style.color = "var(--error-color)";
+                setTimeout(() => { if(!dzG2.classList.contains('correct')) { dzG2.className = "drop-zone"; dzG2.innerHTML = "Жауапты осы жерге апарып тастаңыз"; document.getElementById('feedback-g2').textContent = ""; } }, 2000);
+            }
+        });
+
+        function nextQuestionG2() {
+            currentQuestionIdxG2++;
+            if (currentQuestionIdxG2 < quizDataG2.length) loadQuestionG2();
+            else { document.getElementById('quiz-box-g2').style.display = "none"; document.getElementById('result-screen-g2').style.display = "block"; }
+        }
+        function restartGameG2() { currentQuestionIdxG2 = 0; document.getElementById('result-screen-g2').style.display = "none"; document.getElementById('quiz-box-g2').style.display = "block"; loadQuestionG2(); }
+        loadQuestionG2();
+
+        // ------------------------------------------------------
+        // 3-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const visitorsG3 = [
+            { icon: "🏛️", desc: "Республиканың аккредиттелген қоғамдық бірлестігінің ресми өкілі мен маманы келді. Ол дауыс беру басталғаннан нәтиже шыққанға дейін залда бір мезгілде отырғысы келеді.", isAllowed: true, law: "Заң бойынша: Республиканың аккредиттелген қоғамдық бірлестіктері мен коммерциялық емес ұйымдарының өкілдері дауыс беру кезінде және нәтижесі анықталғанға дейін залда бір мезгілде қатыса алады." },
+            { icon: "🌍", desc: "Шет мемлекеттер мен халықаралық ұйымдардың аккредиттелген ресми байқаушылары және шетелдік БАҚ-тың бас редакторы топпен келді.", isAllowed: true, law: "Заң бойынша: Халықаралық байқаушылар мен шетелдік бұқаралық ақпарат құралдарының өкілдері мен бас редакторлары сайлау барысын бақылауға толық құқылы." },
+            { icon: "🎥", desc: "Бір телеарнадан қызметтік куәліктері мен редакциялық тапсырмасы бар 3 адамнан тұратын түсірілім тобы (журналист, оператор, дыбыс маманы) келді.", isAllowed: true, law: "Заң бойынша: Қызметтік куәлігі мен тапсырмасы болған жағдайда әрбір телеарнадан үшеуден аспайтын (максимум 3) өкіл қатысуға құқылы. Бұл заңға сай." },
+            { icon: "📰", desc: "Бір отандық газет басылымынан қызметтік куәліктері мен тапсырмалары бар 4 бірдей журналист бір уақытта залда бақылау жүргізу үшін кіруді сұрады.", isAllowed: false, law: "Заң бойынша шектеу: Әрбір бұқаралық ақпарат құралынан (телеарнадан басқа) бір мезгілде залда 2 өкілден аспайтын адам ғана қатыса алады. 4 адамға бірден кіруге рұқсат жоқ!" },
+            { icon: "🎤", desc: "Қызметтік куәлігі бар, бірақ дәл осы сайлау учаскесіне бару туралы редакцияның жазбаша тапсырмасы (бұйрығы) жоқ БАҚ тілшісі кіруге рұқсат сұрады.", isAllowed: false, law: "Заң бойынша шектеу: БАҚ өкілінде қызметтік куәлікпен қатар міндетті түрде редакцияның ресми тапсырмасы болуы керек. Онсыз рұқсат берілмейді." }
+        ];
+        let currentIdxG3 = 0; let scoreG3 = 0;
+
+        function loadVisitorG3() {
+            document.getElementById('feedback-overlay-g3').classList.remove('show');
+            if (currentIdxG3 < visitorsG3.length) {
+                document.getElementById('question-num-g3').textContent = `Кейіпкер: ${currentIdxG3 + 1}/${visitorsG3.length}`;
+                document.getElementById('visitor-icon-g3').textContent = visitorsG3[currentIdxG3].icon;
+                document.getElementById('visitor-desc-g3').textContent = visitorsG3[currentIdxG3].desc;
+            } else {
+                document.getElementById('game-stage-g3').style.display = 'none'; document.getElementById('result-screen-g3').style.display = 'block';
+                document.getElementById('final-text-g3').textContent = `Сіз 5 жағдайдың ${scoreG3}-інде дұрыс шешім қабылдадыңыз. Сайлау учаскесінде заңдылықты қорғау деңгейіңіз жоғары!`;
+            }
+        }
+
+        function checkChoiceG3(userChoice) {
+            const v = visitorsG3[currentIdxG3]; const isCorrect = (userChoice === v.isAllowed);
+            const overlay = document.getElementById('feedback-overlay-g3'); overlay.classList.add('show');
+            if (isCorrect) {
+                scoreG3++; document.getElementById('score-g3').textContent = `Ұпай: ${scoreG3}`;
+                overlay.style.backgroundColor = 'rgba(40, 167, 69, 0.95)';
+                document.getElementById('feedback-status-g3').textContent = "🎯 ДҰРЫС ШЕШІМ"; document.getElementById('feedback-title-g3').textContent = "Заң талабы сақталды!";
+            } else {
+                overlay.style.backgroundColor = 'rgba(220, 53, 69, 0.95)';
+                document.getElementById('feedback-status-g3').textContent = "❌ ҚАТЕ ШЕШІМ"; document.getElementById('feedback-title-g3').textContent = "Заң бұзылуы мүмкін еді!";
+            }
+            document.getElementById('feedback-law-g3').innerHTML = v.law;
+        }
+        function nextVisitorG3() { currentIdxG3++; loadVisitorG3(); }
+        function restartGameG3() { currentIdxG3 = 0; scoreG3 = 0; document.getElementById('score-g3').textContent = `Ұпай: 0`; document.getElementById('result-screen-g3').style.display = 'none'; document.getElementById('game-stage-g3').style.display = 'block'; loadVisitorG3(); }
+        loadVisitorG3();
+
+        // ------------------------------------------------------
+        // 4-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const casesG4 = [
+            { docs: ["📄 <b>Құжат 1:</b> «Аманат-Қоғам» қоғамдық бірлестігінің ресми бланкісіндегі жазбаша жолдама. Ішінде байқаушы «Серіков Арман Бақытұлы» деп Т.А.Ә. анық жазылған, ұйымның көк мөрі басылған.", "🪪 <b>Құжат 2:</b> Серіков Арман Бақытұлының ҚР азаматының түпнұсқа жеке куәлігі."], shouldAccept: true, lawExplanation: "Бұл байқаушы заң талаптарын толық орындады: оның жеке басын куәландыратын құжаты да, Т.А.Ә. жазылған және ұйым мөрімен расталған жазбаша құжаты да түгел. Залға кіргізу — дұрыс шешім!" },
+            { docs: ["📄 <b>Құжат 1:</b> Коммерциялық емес ұйымның хаты. Мәтінінде: «Осы сайлау учаскесіне біздің ұйымнан байқаушы жіберілді» деп жазылған, мөрі бар. Бірақ байқаушының Аты-жөні (Т.А.Ә.) мүлдем жазылмаған.", "🪪 <b>Құжат 2:</b> Келген азаматтың жеке куәлігі жанында бар."], shouldAccept: false, lawExplanation: "Қателік! Заң бойынша жіберуші ұйымның жазбаша құжатында байқаушының тегі, аты және әкесінің аты **міндетті түрде көрсетілуі тиіс**. Аты-жөні жазылмаған құжат жарамсыз. Кіргізуден бас тарту керек еді." },
+            { docs: ["📄 <b>Құжат 1:</b> Аккредиттелген қоғамдық бірлестіктің жолдама хаты. Онда байқаушы «Мұратова Динара Саматқызы» деп тайға таңба басқандай жазылған. Бірақ хатта ұйымның ресми мөрі ұмытылып кеткен (мөр басылмаған).", "🪪 <b>Құжат 2:</b> Мұратова Динараның жеке куәлігі бар."], shouldAccept: false, lawExplanation: "Қателік! Заң бойынша байқаушыны жіберген ұйымның хаты міндетті түрде **ұйым мөрімен куәландырылуы қажет**. Мөрсіз құжат заңсыз болып саналады. Кіргізуден бас тарту керек еді." }
+        ];
+        let currentCaseIdxG4 = 0; let correctAnswersCountG4 = 0;
+
+        function initCaseG4() {
+            document.getElementById('feedback-modal-g4').classList.remove('show');
+            document.getElementById('check-id-g4').checked = false; document.getElementById('check-doc-g4').checked = false; document.getElementById('check-stamp-g4').checked = false;
+            if (currentCaseIdxG4 < casesG4.length) {
+                document.getElementById('case-num-g4').textContent = `Байқаушы: ${currentCaseIdxG4 + 1}/${casesG4.length}`;
+                const container = document.getElementById('documents-container-g4'); container.innerHTML = "";
+                casesG4[currentCaseIdxG4].docs.forEach(text => { const div = document.createElement('div'); div.className = "document-item"; div.innerHTML = text; container.appendChild(div); });
+            } else {
+                document.getElementById('game-zone-g4').style.display = 'none'; document.getElementById('final-screen-g4').style.display = 'block';
+                document.getElementById('final-desc-g4').textContent = `Сіз ${casesG4.length} байқаушының ішінен ${correctAnswersCountG4}-інің құжаттарын заңға сай дәл тексердіңіз.`;
+            }
+        }
+
+        function processDecisionG4(userAccepted) {
+            const currentCase = casesG4[currentCaseIdxG4]; const isDecisionCorrect = (userAccepted === currentCase.shouldAccept);
+            const modal = document.getElementById('feedback-modal-g4'); modal.classList.add('show');
+            const statusEl = document.getElementById('modal-status-g4');
+            if (isDecisionCorrect) {
+                correctAnswersCountG4++; document.getElementById('score-text-g4').textContent = `Дұрыс шешім: ${correctAnswersCountG4}`;
+                statusEl.textContent = "🎯 ӨТЕ ДҰРЫС ШЕШІМ!"; statusEl.style.color = "var(--success-color)";
+                modal.style.backgroundColor = "rgba(40, 167, 69, 0.95)";
+            } else {
+                statusEl.textContent = "❌ ЗЕЙІН САЛЫҢЫЗ!"; statusEl.style.color = "var(--error-color)";
+                modal.style.backgroundColor = "rgba(220, 53, 69, 0.95)";
+            }
+            document.getElementById('modal-desc-g4').innerHTML = currentCase.lawExplanation;
+        }
+        function goToNextCaseG4() { currentCaseIdxG4++; initCaseG4(); }
+        function restartAppG4() { currentCaseIdxG4 = 0; correctAnswersCountG4 = 0; document.getElementById('score-text-g4').textContent = `Дұрыс шешім: 0`; document.getElementById('final-screen-g4').style.display = 'none'; document.getElementById('game-zone-g4').style.display = 'block'; initCaseG4(); }
+        initCaseG4();
+
+        // ------------------------------------------------------
+        // 5-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const casesG5 = [
+            { icon: "🇺🇸", text: "Сайлау учаскесіне «BBC» (Ұлыбритания) арнасының тілшісі келді. Ол өзімен бірге <b>Ұлыбритания азаматының паспортын</b> және <b>ҚР Сыртқы істер министрлігі берген қолданыстағы аккредиттеу куәлігін</b> ұсынды.", isValid: true, law: "<b>Дұрыс!</b> Шетелдік журналист заңда бекітілген қос құжатты да (жеке паспорт және ҚР СІМ куәлігі) толық көрсетті. Оған учаскеде болуға рұқсат беріледі." },
+            { icon: "🇩🇪", text: "Сайлау учаскесіне Германиялық басылымның тілшісі келді. Ол тексеруге өз елінің <b>ұлттық паспортын</b> және Германиядағы <b>өз редакциясының мөрлі іссапар тапсырма хатын</b> көрсетті.", isValid: false, law: "<b>Дұрыс шешім! (Кіргізбеу керек).</b> Мәтінде ҚР Сыртқы істер министрлігінің аккредиттеу куәлігі туралы ақпарат жоқ. Шетелдік БАҚ үшін өз редакциясының хаты СІМ куәлігін алмастыра алмайды." },
+            { icon: "🇯🇵", text: "Сайлау учаскесіне Жапониялық телеарна операторы келді. Ол өзінің <b>ұлттық төлқұжатын</b> және <b>ҚР СІМ аккредиттеу куәлігін</b> ұсынды. Тексеру барысында куәліктің жарамдылық мерзімі өткен айда аяқталғаны анықталды.", isValid: false, law: "<b>Дұрыс шешім! (Кіргізбеу керек).</b> Аккредиттеу куәлігінің мерзімі міндетті түрде сайлау өтіп жатқан күнге жарамды болуы тиіс. Мерзімі өткен құжат заңсыз болып саналады." },
+            { icon: "🇹🇷", text: "Сайлау учаскесіне Түркиялық «TRT» агенттігінің тілшісі келді. Ол тексеру үшін өзінің суреті мен Т.А.Ә. жазылған <b>ҚР СІМ аккредиттеу туралы куәлігін (пластик картасын)</b> ғана ұсынды.", isValid: false, law: "<b>Дұрыс шешім! (Кіргізбеу керек).</b> Тек қана СІМ куәлігі жеткіліксіз. Заң бойынша шетелдік журналист өзінің жеке басын куәландыратын құжатын (паспортын) куәлікпен бірге қатар көрсетуге міндетті." }
+        ];
+        let currentIdxG5 = 0; let correctAnswersG5 = 0;
+
+        function initCaseG5() {
+            document.getElementById('info-overlay-g5').classList.remove('show');
+            if (currentIdxG5 < casesG5.length) {
+                document.getElementById('case-counter-g5').textContent = `Журналист: ${currentIdxG5 + 1}/${casesG5.length}`;
+                document.getElementById('j-icon-g5').textContent = casesG5[currentIdxG5].icon;
+                document.getElementById('j-text-g5').innerHTML = casesG5[currentIdxG5].text;
+            } else {
+                document.getElementById('game-stage-g5').style.display = 'none'; document.getElementById('end-screen-g5').style.display = 'block';
+                document.getElementById('final-report-g5').innerHTML = `Сіз 4 жағдайдың <b>${correctAnswersG5}</b>-інде дұрыс таңдау жасадыңыз!`;
+            }
+        }
+
+        function evaluateChoiceG5(userApproved) {
+            const currentCase = casesG5[currentIdxG5]; const isCorrect = (userApproved === currentCase.isValid);
+            const overlay = document.getElementById('info-overlay-g5'); overlay.classList.add('show');
+            const title = document.getElementById('status-title-g5');
+            if (isCorrect) {
+                correctAnswersG5++; document.getElementById('score-counter-g5').textContent = `Дұрыс таңдау: ${correctAnswersG5}`;
+                title.textContent = "🎯 ДҰРЫС ШЕШІМ"; title.style.color = "var(--success-color)";
+                overlay.style.backgroundColor = "rgba(40, 167, 69, 0.95)";
+            } else {
+                title.textContent = "❌ ҚАТЕ ШЕШІМ"; title.style.color = "var(--error-color)";
+                overlay.style.backgroundColor = "rgba(220, 53, 69, 0.95)";
+            }
+            document.getElementById('law-text-g5').innerHTML = currentCase.law;
+        }
+        function nextCaseG5() { currentIdxG5++; initCaseG5(); }
+        function restartGameG5() { currentIdxG5 = 0; correctAnswersG5 = 0; document.getElementById('score-counter-g5').textContent = `Дұрыс таңдау: 0`; document.getElementById('end-screen-g5').style.display = 'none'; document.getElementById('game-stage-g5').style.display = 'block'; initCaseG5(); }
+        initCaseG5();
+
+        // ------------------------------------------------------
+        // 6-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const scenariosG6 = [
+            { text: "Дауыстарды санау рәсімі басталды. Байқаушы комиссия мүшелерінің қасына келіп, үстел үстінде жатқан бюллетендерді өз қолымен араластырып, санау процесін жеке қадағалай бастады.", isViolation: true, law: "<b>Дұрыс! Бұл — заң бұзушылық.</b> Заң бойынша байқаушы сайлау комиссиясының дауыстарды санау рәсіміне тікелей <b>араласпауға</b> және комиссия жұмысына кедергі келтіретін іс-әрекеттер жасамауға міндетті. Ол тек сырттай бақылай алады." },
+            { text: "Байқаушы сайлау учаскесінде отырып, өзінің ұялы телефонына дауыс беру залының жалпы көрінісін және комиссия мүшелерінің жұмыс сәтін бейнежазбаға (видеоға) түсіріп алды.", isViolation: false, law: "<b>Дұрыс! Тәртіп бұзылған жоқ.</b> Заң байқаушыға фото-, аудио- және бейнежазба жасауға рұқсат береді, тек бұл әрекет ҚР заңнама талаптарын (азаматтардың жеке деректері мен құпиялылықты бұзбау) сақтай отырып жасалуы тиіс." },
+            { text: "Комиссия төрағасы учаскедегі техникалық қауіпсіздік пен тәртіпті қамтамасыз ету мақсатында байқаушылардан өздеріне арнайы бөліген орындарға отыруды талап етті. Алайда байқаушы бұл талапқа бағынбай, залдың ортасында тұрып алды.", isViolation: true, law: "<b>Дұрыс! Бұл — заң бұзушылық.</b> Байқаушы сайлау учаскесінде сайлау комиссиясы төрағасының тиісті сайлау комиссиясы белгілеген тәртіп ережелерін сақтау жөніндегі заңды талаптарын <b>орындауға міндетті</b>." },
+            { text: "Байқаушы комиссия төрағасына келіп, «Сайлау залында заң бұзылды, маған мына азаматтың іс-әрекеті күмәнді көрінді» деп ауызша мәлімдеді. Бірақ ешқандай жазбаша дәлел немесе құжатталған айғақ ұсынған жоқ.", isViolation: true, law: "<b>Дұрыс! Бұл — заң бұзушылық (міндетті орындамау).</b> Заң бойынша байқаушы сайлау барысындағы өз ескертулерін тек қана <b>құжатталған, шынайы және тексеруге болатын фактілермен негіздеуге</b> міндетті. Негізсіз немесе болжамды айыптауларға жол берілмейді." }
+        ];
+        let currentIndexG6 = 0; let correctScoreG6 = 0;
+
+        function initScenarioG6() {
+            document.getElementById('feedback-box-g6').classList.remove('show');
+            if (currentIndexG6 < scenariosG6.length) {
+                document.getElementById('case-num-g6').textContent = `Жағдай: ${currentIndexG6 + 1}/${scenariosG6.length}`;
+                document.getElementById('situation-text-g6').innerHTML = scenariosG6[currentIndexG6].text;
+            } else {
+                document.getElementById('main-game-g6').style.display = 'none'; document.getElementById('result-screen-g6').style.display = 'block';
+                document.getElementById('final-stats-g6').innerHTML = `Сіз сайлау учаскесіндегі 4 күрделі жағдаяттың <b>${correctScoreG6}</b>-ін заңға сәйкес дәл бағаладыңыз.`;
+            }
+        }
+
+        function checkAnswerG6(userGuessedViolation) {
+            const currentScenario = scenariosG6[currentIndexG6]; const isChoiceCorrect = (userGuessedViolation === currentScenario.isViolation);
+            const box = document.getElementById('feedback-box-g6'); box.classList.add('show');
+            const title = document.getElementById('feedback-title-g6');
+            if (isChoiceCorrect) {
+                correctScoreG6++; document.getElementById('score-num-g6').textContent = `Дұрыс бағалау: ${correctScoreG6}`;
+                title.textContent = "🎯 ДАУСЫЗ ДҰРЫС ШЕШІМ!"; title.style.color = "var(--success-color)";
+                box.style.backgroundColor = "rgba(40, 167, 69, 0.95)";
+            } else {
+                title.textContent = "❌ ҚАТЕ БАҒАЛАУ!"; title.style.color = "var(--error-color)";
+                box.style.backgroundColor = "rgba(220, 53, 69, 0.95)";
+            }
+            document.getElementById('law-explanation-g6').innerHTML = currentScenario.law;
+        }
+        function loadNextCaseG6() { currentIndexG6++; initScenarioG6(); }
+        function restartSimulationG6() { currentIndexG6 = 0; correctScoreG6 = 0; document.getElementById('score-num-g6').textContent = `Дұрыс бағалау: 0`; document.getElementById('result-screen-g6').style.display = 'none'; document.getElementById('main-game-g6').style.display = 'block'; initScenarioG6(); }
+        initScenarioG6();
+
+        // ------------------------------------------------------
+        // 7-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const stepsG7 = [
+            { text: "Сайлау күні сағат 12:15-те учаскелік комиссияға денсаулығына байланысты келе алмайтын азаматтан үйден дауыс беру туралы жазбаша өтініш жеткізілді. Комиссия бұл өтінішті тіркеп, тізімге енгізуі керек пе?", answer: false, explain: "<b>Дұрыс шешім! (Енгізуге болмайды).</b> Заң бойынша үй жайдан тыс дауыс беру туралы өтініштерді қабылдау сайлау күні **сағат 12:00-де** толық тоқтатылады. Одан кейін келген өтініштер қабылданбайды." },
+            { text: "Үйден дауыс беруді ұйымдастыру үшін комиссия төрағасы 1 комиссия мүшесін тағайындап, тасымалы жәшікпен (урнамен) жалғыз өзін мекенжайларға жіберу туралы шешім қабылдады. Бұл әрекет заңды ма?", answer: false, explain: "<b>Дұрыс шешім! (Заңсыз әрекет).</b> Үй жайдан тыс дауыс беруді ұйымдастыруға сайлау комиссиясының **кемінде 2 мүшесі** бірге баруы міндетті. Бір ғана мүшені жіберу заң бұзушылық болып табылады." },
+            { text: "Үйден дауыс беру тізімі бекітілгеннен кейін, комиссия мүшелері уақытты үнемдеу және мекенжайларды шатастырмау мақсатында баратын үйлердің алдын ала қозғалыс маршрутын (картасын) сызып алды. Бұл қадам дұрыс па?", answer: true, explain: "<b>Дұрыс шешім!</b> Бару бағытын алдын ала нақты сызып алу логистикалық тұрғыдан өте дұрыс. Бұл уақытты тиімді пайдалануға және дауыс беруді белгіленген мерзімде аяқтауға мүмкіндік береді." },
+            { text: "Үйден дауыс беруге шыққан комиссия мүшелерінің артынан сайлау учаскесінде тіркелген ресми аккредиттелген 2 байқаушы «біз де бірге еріп барып, үйлердегі процесті бақылаймыз» деп талап қойды. Байқаушылардың бұған құқығы бар ма?", answer: true, explain: "<b>Дұрыс шешім! (Құқығы бар).</b> Саяси партиялардың, қоғамдық бірлестіктердің және БАҚ-тың аккредиттелген байқаушыларының үй жайдан тыс дауыс беру кезінде комиссия мүшелерімен бірге **еріп баруға толық құқығы бар**." }
+        ];
+        let currentStepIdxG7 = 0; let scoreG7 = 0;
+
+        function initStepG7() {
+            document.getElementById('overlay-box-g7').classList.remove('show');
+            if (currentStepIdxG7 < stepsG7.length) {
+                document.getElementById('step-txt-g7').textContent = `Кезең: ${currentStepIdxG7 + 1}/${stepsG7.length}`;
+                document.getElementById('quest-text-g7').innerHTML = stepsG7[currentStepIdxG7].text;
+            } else {
+                document.getElementById('game-playground-g7').style.display = 'none'; document.getElementById('end-box-g7').style.display = 'block';
+                document.getElementById('end-desc-g7').innerHTML = `Сіз үй жайдан тыс дауыс беру барысында 4 маңызды сұрақтың <b>${scoreG7}</b>-іне заңға сай дәл жауап бердіңіз!`;
+            }
+        }
+
+        function submitDecisionG7(userChoice) {
+            const currentStep = stepsG7[currentStepIdxG7]; const isCorrect = (userChoice === currentStep.answer);
+            const overlay = document.getElementById('overlay-box-g7'); overlay.classList.add('show');
+            const title = document.getElementById('overlay-title-g7');
+            if (isCorrect) {
+                scoreG7++; document.getElementById('score-txt-g7').textContent = `Дұрыс шешім: ${scoreG7}`;
+                title.textContent = "🎯 ӨТЕ ДҰРЫС!"; title.style.color = "var(--success-color)";
+                overlay.style.backgroundColor = "rgba(40, 167, 69, 0.95)";
+            } else {
+                title.textContent = "❌ ҚАТЕЛІК КЕТТІ!"; title.style.color = "var(--error-color)";
+                overlay.style.backgroundColor = "rgba(220, 53, 69, 0.95)";
+            }
+            document.getElementById('overlay-desc-g7').innerHTML = currentStep.explain;
+        }
+        function nextStepG7() { currentStepIdxG7++; initStepG7(); }
+        function restartSimulationG7() { currentStepIdxG7 = 0; scoreG7 = 0; document.getElementById('score-txt-g7').textContent = `Дұрыс шешім: 0`; document.getElementById('end-box-g7').style.display = 'none'; document.getElementById('game-playground-g7').style.display = 'block'; initStepG7(); }
+        initStepG7();
+
+        // ------------------------------------------------------
+        // 8-ОЙЫН ЛОГИКАСЫ
+        // ------------------------------------------------------
+        const dragCardsG8 = document.querySelectorAll('#inventory-zone-g8 .drag-card');
+        const roomSpotsG8 = document.querySelectorAll('.room-spot');
+        const inventoryZoneG8 = document.getElementById('inventory-zone-g8');
+        let currentDraggedG8 = null;
+
+        function shuffleInventoryG8() {
+            const cards = Array.from(dragCardsG8); cards.sort(() => Math.random() - 0.5);
+            cards.forEach(card => inventoryZoneG8.appendChild(card));
+        }
+        shuffleInventoryG8();
+
+        dragCardsG8.forEach(card => {
+            card.addEventListener('dragstart', function() { currentDraggedG8 = this; setTimeout(() => this.style.opacity = '0.4', 0); });
+            card.addEventListener('dragend', function() { setTimeout(() => this.style.opacity = '1', 0); currentDraggedG8 = null; });
+            card.addEventListener('click', function() {
+                if (this.parentElement === inventoryZoneG8) {
+                    const firstEmpty = Array.from(roomSpotsG8).find(spot => spot.children.length === 0);
+                    if (firstEmpty) firstEmpty.appendChild(this);
+                } else {
+                    const pSpot = this.parentElement; inventoryZoneG8.appendChild(this); pSpot.classList.remove('correct');
+                }
+            });
+        });
+
+        roomSpotsG8.forEach(spot => {
+            spot.addEventListener('dragover', e => e.preventDefault());
+            spot.addEventListener('drop', function(e) { e.preventDefault(); if (!this.children.length && currentDraggedG8) this.appendChild(currentDraggedG8); });
+            spot.addEventListener('click', function() { if (this.children.length) { inventoryZoneG8.appendChild(this.children[0]); this.classList.remove('correct'); } });
+        });
+
+        function verifyRoomG8() {
+            let correctCount = 0;
+            roomSpotsG8.forEach(spot => {
+                const targetId = spot.getAttribute('data-id');
+                if (spot.children.length > 0) {
+                    if (spot.children[0].id === targetId) { spot.classList.add('correct'); correctCount++; }
+                    else spot.classList.remove('correct');
+                }
+            });
+            const modal = document.getElementById('result-modal-g8'); modal.style.display = 'flex';
+            const mTitle = document.getElementById('modal-title-g8'); const mDesc = document.getElementById('modal-desc-g8');
+            if (correctCount === roomSpotsG8.length) {
+                mTitle.textContent = "🎯 ЕМТИХАННАН ӨТТІҢІЗ!"; mTitle.style.color = "var(--success-color)";
+                mDesc.innerHTML = "<b>Керемет!</b> Ешқандай тұспалсыз сайлау залын қатесіз жинақтадыңыз. Мемлекеттік рәміздер өз орнында, ал сайлаушылардың қозғалыс траекториясы заңға толық сай келеді.";
+            } else {
+                mTitle.textContent = "⚠️ СХЕМА ДҰРЫС ЕМЕС!"; mTitle.style.color = "var(--error-color)";
+                mDesc.innerHTML = `Сіз 6 маңызды нысанның <b>${correctCount}</b>-ін дұрыс таптыңыз. Жасыл түспен белгіленбеген аймақтарды қайта тексеріңіз.`;
+            }
+        }
+        function resetSimulationG8() {
+            document.getElementById('result-modal-g8').style.display = 'none';
+            roomSpotsG8.forEach(spot => { spot.classList.remove('correct'); if (spot.children.length) inventoryZoneG8.appendChild(spot.children[0]); });
+            shuffleInventoryG8();
+        }
+    </script>
+</body>
+</html>
